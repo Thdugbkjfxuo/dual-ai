@@ -1,37 +1,68 @@
+-- RarityTable
+-- Rarity tiers (colour, rank) and the weighted roll every egg uses.
+-- Round 1: five tiers plus the Midnight variant replace the prototype's nine tiers. With six creatures,
+-- nine tiers (down to a 0.01% "Eternal") would mostly be empty labels; five read clearly on a phone.
+
 local RarityTable = {}
 
--- Weighted odds, must sum to 100. Value = base currency reward on hatch.
-RarityTable.Weights = {
-	{Name = "Common", Weight = 45, Value = 5, Color = Color3.fromRGB(200, 200, 200)},
-	{Name = "Uncommon", Weight = 25, Value = 15, Color = Color3.fromRGB(120, 220, 120)},
-	{Name = "Rare", Weight = 15, Value = 40, Color = Color3.fromRGB(90, 160, 255)},
-	{Name = "Epic", Weight = 9, Value = 100, Color = Color3.fromRGB(180, 90, 255)},
-	{Name = "Legendary", Weight = 4.5, Value = 300, Color = Color3.fromRGB(255, 180, 40)},
-	{Name = "Mythic", Weight = 1.4, Value = 1000, Color = Color3.fromRGB(255, 80, 80)},
-	{Name = "Secret", Weight = 0.05, Value = 5000, Color = Color3.fromRGB(40, 40, 40)},
-	{Name = "Cosmic", Weight = 0.04, Value = 15000, Color = Color3.fromRGB(150, 60, 220)},
-	{Name = "Eternal", Weight = 0.01, Value = 50000, Color = Color3.fromRGB(255, 240, 150)},
+RarityTable.Order = { "Common", "Uncommon", "Rare", "Epic", "Legendary" }
+
+RarityTable.Tiers = {
+	Common = { Rank = 1, Color = Color3.fromRGB(205, 205, 205) },
+	Uncommon = { Rank = 2, Color = Color3.fromRGB(120, 220, 120) },
+	Rare = { Rank = 3, Color = Color3.fromRGB(90, 160, 255) },
+	Epic = { Rank = 4, Color = Color3.fromRGB(190, 100, 255) },
+	Legendary = { Rank = 5, Color = Color3.fromRGB(255, 185, 45) },
 }
 
-function RarityTable.GetEntry(name)
-	for _, entry in ipairs(RarityTable.Weights) do
-		if entry.Name == name then
-			return entry
-		end
-	end
-	return nil
+RarityTable.MidnightColor = Color3.fromRGB(165, 125, 255)
+
+function RarityTable.Get(name)
+	return RarityTable.Tiers[name] or RarityTable.Tiers.Common
 end
 
-function RarityTable.RollRarity()
-	local roll = math.random() * 100
-	local cumulative = 0
-	for _, entry in ipairs(RarityTable.Weights) do
-		cumulative = cumulative + entry.Weight
-		if roll <= cumulative then
-			return entry.Name
+-- odds: array of { Id = string, Weight = number }. rng: a Random object (the server passes its own).
+-- Returns the chosen Id, or nil when no entry has a positive weight.
+function RarityTable.Roll(odds, rng)
+	local total = 0
+	for _, entry in odds do
+		if entry.Weight > 0 then
+			total += entry.Weight
 		end
 	end
-	return RarityTable.Weights[1].Name -- fallback
+	if total <= 0 then
+		return nil
+	end
+
+	local roll = rng:NextNumber() * total
+	local last = nil
+	for _, entry in odds do
+		if entry.Weight > 0 then
+			last = entry.Id
+			roll -= entry.Weight
+			if roll < 0 then
+				return entry.Id
+			end
+		end
+	end
+	return last -- floating-point edge: roll landed exactly on the total
+end
+
+-- Percent chance (0-100) of one Id in an odds table.
+function RarityTable.Percent(odds, id)
+	local total, weight = 0, 0
+	for _, entry in odds do
+		if entry.Weight > 0 then
+			total += entry.Weight
+			if entry.Id == id then
+				weight += entry.Weight
+			end
+		end
+	end
+	if total <= 0 then
+		return 0
+	end
+	return weight / total * 100
 end
 
 return RarityTable

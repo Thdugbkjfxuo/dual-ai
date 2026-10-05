@@ -1,88 +1,102 @@
-# Midnight Hatch — Round 0 project package
+# Midnight Hatch
 
-This folder contains the existing Roblox/Rojo prototype and ChatGPT's Round 0 game proposal. The Midnight Hatch gameplay has not been implemented yet. Claude's pitch and the combined design decision are still pending.
+Steal an egg from a sleeping monster, run it home before she catches you, and hatch a weird pet
+that makes you better at the next heist. A Roblox game for ages 10 to 17, phone first, built round
+by round by Claude and ChatGPT, with Hayk passing the messages.
 
-## Open the project
+**Status: Round 1, the first playable build.** It has one moonlit forest, one guardian (Mama Moss),
+three eggs, six pets with jobs, the Dusk and Midnight cycle, Giant-egg helpers, the HUD, the hatch
+reveal and the pets panel. Data lives in memory only; saving comes in Round 2.
 
-The Rojo configuration is `default.project.json`. Keep the `src` subfolders intact because Rojo maps them to Roblox services.
+- Design: [`docs/DESIGN.md`](docs/DESIGN.md)
+- Every round, including ChatGPT's Round 0 word for word: [`docs/ROUNDS.md`](docs/ROUNDS.md)
+- Every file and who last changed it: [`FILE_LIST.md`](FILE_LIST.md)
 
-To serve this copy with your installed Rojo:
+## Put it in Studio (Rojo 7.7)
+
+1. Copy this folder over your project folder (`~/RobloxGame`, or `/Users/goat/claude/MidnightHatch`).
+   Keep the `src/` layout: `default.project.json` maps it to the Roblox services and is unchanged.
+2. **Delete these four prototype files**, which this build replaces. Rojo then removes them from
+   Studio too:
+   - `src/ServerScriptService/Currency.server.lua`
+   - `src/ServerScriptService/EggSystem.server.lua`
+   - `src/ServerScriptService/MapGenerator.server.lua`
+   - `src/ServerScriptService/PlotManager.server.lua`
+3. In Studio, delete the objects the prototype asked you to make by hand, if they exist:
+   `Workspace > Egg` and `ReplicatedStorage > RemoteEvents`. The game now makes its own remotes. If
+   you forget, the old egg is also removed while you play.
+4. Run `rojo serve default.project.json` and connect the Rojo plugin.
+5. Press **Play**.
+
+No other Studio settings are needed for Round 1 (no DataStores yet). R6 and R15 avatars both work.
+
+## What you should see
+
+- **Output:** `[MapService] Built the forest: 496 parts.` and
+  `[Main] Midnight Hatch 0.1.0 (Round 1 first playable) is running.`, with no red errors.
+- **The Hatchery:** you spawn inside a warm, lantern-lit enclosure. The top of the screen shows
+  "🌆 Midnight in 4:00" and the Wake meter ("😴 Mama Moss is asleep"). Shells and the 🐾 PETS button
+  sit on the left. The bottom line says to grab an egg.
+- **A practice egg:** walk out through the gate. A small egg sits on the trail. The **GRAB** button
+  appears (on a phone, just left of the jump button). Tap it (or press E). The egg rides above your
+  head, you slow down, and a **DROP** button appears (Q).
+- **Hatching:** walk back inside the fence. The egg wobbles, flashes and reveals a pet with its job
+  and "+5 🐚". The pet now follows you.
+- **The nest:** follow the trail to Mama Moss (purple "MAMA MOSS'S NEST" label).
+  - Grab a Pebble: the meter barely moves.
+  - Grab a Moss egg: it climbs to about 40%.
+  - Grab the Giant egg: the meter fills, she roars ("!" over her head, the screen shakes) and she
+    chases you. The edges of your screen glow red and the status line says "RUN!".
+- **Getting caught:** you drop the egg, get shoved and are dizzy for 1.6 seconds. Anyone can grab
+  the dropped egg after a moment.
+
+## Two-player checks (Test > Clients and Servers > 2 players)
+
+- Both players stand at the same egg and tap GRAB together: exactly one gets it, and the other sees
+  "Too slow!".
+- Player 1 grabs the Giant egg. Player 2 walks up and taps **HELP**: a glowing rope links them and
+  Player 1 speeds up. Walk into the Hatchery together and **both** get a hatch.
+- One player drops an egg (Q): nobody can grab it for a moment, then anyone can.
+
+## Studio-only test keys
+
+| Key | Does |
+|---|---|
+| F6 | Midnight now (purple sky, glowing eggs, Mama Moss patrols) |
+| F7 | Back to Dusk |
+| F8 | Wake Mama Moss |
+| F9 | +1000 Shells |
+
+The server ignores these outside Studio.
+
+## Phone layout
+
+Use the **Device emulator** (Test > Device). Try a small phone (for example iPhone SE) and a large
+one. The GRAB button must not cover the jump button, and every label must fit.
+
+## Automated checks (no Studio needed)
+
+They need [Lune](https://github.com/lune-org/lune), [selene](https://github.com/Kampfkarren/selene)
+and [StyLua](https://github.com/JohnnyMorganz/StyLua) (`cargo install lune selene stylua`).
 
 ```sh
-cd /Users/goat/claude/MidnightHatch
-rojo serve default.project.json
+lune run tests/run.luau     # 26 unit tests: odds, pets, noise meter, egg ledger (contention, one reward, locks, helpers)
+lune run tests/smoke.luau   # 66 integration checks: real server + client scripts in a simulated DataModel (~80 s)
+selene src                  # lint
+stylua --check src tests    # formatting
 ```
 
-Connect Roblox Studio's Rojo plugin to the server shown in the terminal. Serve either this copy or the original project; pick the intended server when connecting Studio.
+`tests/` and the tool configs are not part of the Roblox place; Rojo ignores them.
 
-The existing Lua scripts are exact copies of the original prototype. They have not been changed or playtested during packaging. The original project remains at `/Users/goat/RobloxGame`.
+## Layout
 
-The prototype's EggSystem script currently expects manually created Studio instances: `ReplicatedStorage/RemoteEvents/HatchEgg` (RemoteEvent), and `Workspace/Egg` (Part) with a `ProximityPrompt`. Packaging has not created those instances or a Studio place file.
-
-## Proposed game
-
-**Working name:** Midnight Hatch
-
-**Hook:** Grab an egg from a sleeping monster, escape with friends, and hatch a strange pet for your permanent collection. Bigger eggs promise more unusual pets but make more noise and attract the guardian.
-
-**Core loop:** Find a nest, choose a safe or risky egg, carry it through the forest, dodge the guardian or help a friend, reach the hatchery, then hatch and collect.
-
-**Session length:** Five-minute cycles: 30 seconds preparation, three minutes exploration, one minute midnight escape, and 30 seconds results. Players can bank and hatch eggs during exploration. New arrivals get a safe introductory route.
-
-**Failure:** Lose only the egg currently being carried. Previously collected pets and earned progression stay safe. Return to play quickly.
-
-**Progression:** Earn Shells through successful runs. Unlock biomes, modest equipment upgrades, collection milestones, and hatchery decorations. Start with six original creatures, including Toast Moth, Socktopus, and Moonbean.
-
-**Social play:** Friends distract the guardian and recover dropped eggs. Solo play remains viable. The proposed initial mode uses monster nests and cooperative play; an optional later competitive mode could put only unbanked eggs at risk.
-
-**Monetization:** Direct purchases of lantern skins, pet outfits, hatch animations, emotes, and decorations. Purchases are cosmetic. Speed, survival tools, and pet availability come through play.
-
-**Creator appeal:** Giant-egg challenges, last-second group escapes, discoveries, and funny guardian chases produce clear video premises through actual gameplay.
-
-## Research checked October 5, 2026
-
-Roblox's live chart was checked with United States and Entry-level Phone selected. 99 Nights in the Forest and Dandy's World occupied the first two Top Trending positions. The separate Top Playing Now section covered all devices and locations: Steal An Egg led at approximately 1.4 million players, while Adopt Me! showed approximately 256,000. These are snapshots, not monthly averages.
-
-- Live phone charts: https://www.roblox.com/charts?device=low_end_phone&country=us
-- Trending methodology: https://www.roblox.com/charts/top-trending
-
-Roblox describes Trending as increased time spent over the preceding two weeks.
-
-Numerous's giant enchanted-egg YouTube video was verified as published October 3, 2026, with approximately 208,000 views when checked. Its description emphasizes a new biome and rare pets. The design inference is that oversized collectibles, discoveries, and unusual challenges offer clear creator premises.
-
-- Creator video: https://www.youtube.com/watch?v=T7d3h8gYaJ8
-
-TikTok blocked direct browsing. This research does not verify October TikTok rankings or trending hashtags.
-
-## Higgsfield concept art direction
-
-Higgsfield was requested for art production. The image generation attempt returned “Requires basic plan or higher.” No image job was created and this package contains no generated image.
-
-Prepared prompt:
-
-> Create one high-quality visual concept illustration for an original Roblox game pitch called Midnight Hatch. This is concept art, not a screenshot of an existing game, and not a finished launch thumbnail. Bright, readable, charming low-poly toy-like 3D Roblox-inspired aesthetic for ages 10 to 17, mobile-friendly visual clarity, expressive original block-shaped adventurer avatars. Foreground: two cooperating block-shaped adventurers running toward a warm safe hatchery with a giant glowing purple speckled egg between them, one holding a lantern. Background: a comically enormous sleepy original moss-covered owl-cat monster has woken beside its nest and chases them through a compact whimsical moonlit forest. Left side reads as cool blue danger, right side is warm amber safety. Show a small original pet, a toast-shaped moth with tiny jam wings, inside the safe hatchery. Make the contrast, egg, monster silhouette, and escape route instantly readable at phone size. Light spooky excitement, humor, no gore, no horror violence, no copyrighted characters, no real-world brands, no user interface or text. Strong dynamic composition, limited clean geometry, no detailed foliage clutter.
-
-## First playable build
-
-Keep the initial scope to one compact forest, one guardian, six players, three egg types, one hatchery, and one large contextual mobile action button.
-
-The server must decide egg claims, carrying state, extraction, hatch results, and rewards. The current prototype immediately rewards prompt activations without consuming an egg or enforcing a cooldown. Replace that interaction with the validated carry-and-extract loop before treating it as the proposed game.
-
-Studio acceptance test for the implementation round:
-
-1. Start a server with two clients.
-2. Both players attempt to claim the same egg; exactly one receives it.
-3. The guardian responds to the carrying player.
-4. Extraction grants a reward exactly once.
-5. Dropping, dying, repeated input, and simultaneous claims do not duplicate eggs or rewards.
-6. Check touch layout with Studio's device emulator, then measure performance on a real low-end phone.
-
-These are future acceptance tests, not tests completed during Round 0. Game scores begin with the first playable build.
-
-## Message for Claude
-
-ChatGPT proposes Midnight Hatch: five-minute cooperative egg heists with a monster guardian and permanent pet collecting. Live October 5 entry-level-phone charts support spooky survival; global charts and October creator coverage support eggs and rare-pet reveals. Please share your pitch, challenge the weakest mechanic, and propose one combined direction covering hook, loop, progression, cosmetics, and creator appeal. Keep our first build to one map and one guardian. The existing hatch interaction needs consumption, contention handling, server validation, and reward deduplication.
-
-## Shared file list
-
-See `FILE_LIST.md` for every file in this package and its recorded editor.
+```
+default.project.json                      Rojo: src/ -> ReplicatedStorage.Modules, ServerScriptService, StarterPlayerScripts
+src/ReplicatedStorage/Modules/            shared: GameConfig (every number), PetCatalog, RarityTable, PetModels, Net
+src/ServerScriptService/Main.server.lua   starts the services, routes and rate-limits client requests
+src/ServerScriptService/Services/         MapService, PlayerDataService, CycleService, PetService, GuardianService,
+                                          EggService, EggLedger (pure rules, unit-tested)
+src/StarterPlayer/StarterPlayerScripts/   MainUI (HUD, buttons, reveal, pets panel), WorldFX (lighting, pets, effects)
+tests/                                    run.luau (unit), smoke.luau (integration)
+docs/                                     DESIGN.md, ROUNDS.md
+```
